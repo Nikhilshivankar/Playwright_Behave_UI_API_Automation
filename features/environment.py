@@ -68,17 +68,49 @@ def after_scenario(context, scenario):
     
     # Get all tags including feature level tags
     scenario_tags = set(scenario.tags) | set(scenario.feature.tags)
-    
+
+    # Capture stacktrace for failed scenarios (UI & API)
+    if scenario.status == "failed" or scenario.status.name == "failed":
+        error_message = "No exception message found."
+        failed_step_name = "unknown"
+        for step in scenario.steps:
+            if step.status == "failed" or step.status.name == "failed":
+                failed_step_name = step.name
+                error_message = step.error_message or str(step.exception) or error_message
+                break
+                
+        reports_dir = Path("reports/screenshots")
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = "".join(c for c in scenario.name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+        
+        # Save stacktrace to file
+        trace_path = reports_dir / f"fail_{safe_name}_trace.txt"
+        try:
+            with open(trace_path, "w", encoding="utf-8") as f:
+                f.write(f"Scenario: {scenario.name}\n")
+                f.write(f"Failed Step: {failed_step_name}\n")
+                f.write(f"Stacktrace:\n{error_message}\n")
+            logger.error(f"Scenario failure stacktrace written to: {trace_path}")
+            
+            # Attach stacktrace to Allure report
+            import allure
+            allure.attach(
+                f"Scenario: {scenario.name}\nFailed Step: {failed_step_name}\n\nStacktrace:\n{error_message}",
+                name=f"failure_trace_{safe_name}",
+                attachment_type=allure.attachment_type.TEXT
+            )
+        except Exception as ex:
+            logger.error(f"Failed to record failure stacktrace: {ex}")
+
     # 1. UI Context Teardown and Failure Captures
     if "ui" in scenario_tags:
         if hasattr(context, "page") and context.page:
             # Capture failure screenshots
-            if scenario.status == "failed":
-                screenshot_dir = Path("reports/screenshots")
-                screenshot_dir.mkdir(parents=True, exist_ok=True)
-                
+            if scenario.status == "failed" or scenario.status.name == "failed":
+                reports_dir = Path("reports/screenshots")
+                reports_dir.mkdir(parents=True, exist_ok=True)
                 safe_name = "".join(c for c in scenario.name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
-                screenshot_path = screenshot_dir / f"fail_{safe_name}.png"
+                screenshot_path = reports_dir / f"fail_{safe_name}.png"
                 
                 try:
                     context.page.screenshot(path=str(screenshot_path))

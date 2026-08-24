@@ -18,3 +18,4 @@ Feature: UI User Authentication
       | username      | password          | expected_error             |
       | incorrectUser | Password123       | Your username is invalid!  |
       | student       | incorrectPassword | Your password is invalid!  |
+
