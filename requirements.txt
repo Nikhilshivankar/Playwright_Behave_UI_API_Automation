@@ -4,3 +4,5 @@ allure-behave>=2.13.2
 python-dotenv>=1.0.1
 pydantic>=2.6.0
 pydantic-settings>=2.1.0
+behave-html-pretty-formatter>=0.3.0
+
