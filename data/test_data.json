@@ -1,0 +1,41 @@
+{
+  "valid_user": {
+    "username": "<LOADED_FROM_ENV>",
+    "password": "<LOADED_FROM_ENV>"
+  },
+  "invalid_user": {
+    "username": "incorrectUser",
+    "password": "incorrectPassword"
+  },
+  "validation_messages": {
+    "invalid_username_error": "Your username is invalid!",
+    "invalid_password_error": "Your password is invalid!",
+    "success_login_message": "Logged In Successfully"
+  },
+  "api": {
+    "base_url": "<LOADED_FROM_ENV>",
+    "pet_payload": {
+      "name": "doggie",
+      "status": "available",
+      "category": {
+        "id": 1,
+        "name": "Dogs"
+      },
+      "photoUrls": [
+        "https://example.com/dog1.jpg"
+      ],
+      "tags": [
+        {
+          "id": 1,
+          "name": "friendly"
+        }
+      ]
+    }
+  },
+  "e2e_users": [
+    {
+      "username": "student",
+      "password": "Password123"
+    }
+  ]
+}

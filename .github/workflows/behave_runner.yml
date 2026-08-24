@@ -1,0 +1,102 @@
+name: Playwright Behave Test Automation CI
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Select the test suite tag to execute'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - regression
+          - api
+          - ui
+
+jobs:
+  test-execution:
+    name: Execute ${{ matrix.test_type }} Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test_type: ui
+            browser: chromium
+          - test_type: ui
+            browser: firefox
+          - test_type: ui
+            browser: webkit
+          - test_type: api
+            browser: none
+
+    steps:
+    - name: Checkout Code Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python Environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Project Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Playwright Browser Binaries & System Dependencies
+      if: matrix.test_type == 'ui'
+      run: |
+        playwright install --with-deps ${{ matrix.browser }}
+
+    - name: Execute Behave Test Suite
+      env:
+        BASE_URL: ${{ vars.BASE_URL }}
+        API_BASE_URL: ${{ vars.API_BASE_URL }}
+        BROWSER: ${{ matrix.browser }}
+        HEADLESS: 'true'
+        LOG_LEVEL: 'INFO'
+        TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+        TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+      run: |
+        TAG_FILTER=""
+        SUITE_INPUT="${{ github.event.inputs.test_suite }}"
+        
+        # Determine tag filter based on dispatch choice and matrix type
+        if [ "$SUITE_INPUT" = "all" ] || [ -z "$SUITE_INPUT" ]; then
+          # No manual override, execute based on matrix type
+          if [ "${{ matrix.test_type }}" = "ui" ]; then
+            TAG_FILTER="@ui"
+          else
+            TAG_FILTER="@api"
+          fi
+        else
+          # User requested a specific suite tag (smoke, regression, etc.)
+          if [ "${{ matrix.test_type }}" = "ui" ]; then
+            TAG_FILTER="@ui and @$SUITE_INPUT"
+          else
+            TAG_FILTER="@api and @$SUITE_INPUT"
+          fi
+        fi
+        
+        echo "Running behave with tags: $TAG_FILTER..."
+        
+        # Run Behave and generate Allure results
+        behave -t "$TAG_FILTER" -f allure_behave.formatter:AllureFormatter -o reports/allure-results
+
+    - name: Archive Execution Reports & Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-execution-reports-and-logs-${{ matrix.test_type }}-${{ matrix.browser }}
+        path: |
+          reports/
+        retention-days: 14

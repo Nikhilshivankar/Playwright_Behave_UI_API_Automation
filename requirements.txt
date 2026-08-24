@@ -1,0 +1,6 @@
+behave>=1.2.6
+playwright>=1.40.0
+allure-behave>=2.13.2
+python-dotenv>=1.0.1
+pydantic>=2.6.0
+pydantic-settings>=2.1.0
